@@ -198,12 +198,12 @@ h3 { font-size: 1.25rem; }
 /* ============================================================
    COMPONENTS — Tabs
    ============================================================ */
-.tabs { display: flex; border-bottom: 2px solid var(--border); gap: 0; margin-bottom: var(--space-lg); }
+.tabs { display: flex; border-bottom: 2px solid var(--border); gap: 0; margin-bottom: var(--space-lg); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tab-btn {
   background: none;
   border: none;
-  padding: 10px 20px;
-  font-size: 0.9rem;
+  padding: 10px 16px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
   border-bottom: 3px solid transparent;
@@ -211,6 +211,8 @@ h3 { font-size: 1.25rem; }
   transition: all 0.15s;
   cursor: pointer;
   touch-action: manipulation;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tab-btn:hover { color: var(--navy); }
 .tab-btn.active { color: var(--navy); border-bottom-color: var(--navy); }
@@ -661,7 +663,7 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
     <!-- Feature cards -->
     <div style="display:grid; grid-template-columns:1fr 1fr;
                 gap:10px; margin-bottom:var(--space-xl); text-align:left;">
-      <div class="card-std">
+      <div class="card-std intro-feature-card-quick">
         <p style="font-size:13px; font-weight:500;
                   color:var(--text-primary); margin:0 0 4px;">
           ⚡ Quick Diagnostic
@@ -889,6 +891,7 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
   <div class="diag-header">
     <div class="container">
       <div class="diag-header-inner">
+        <button id="btn-diag-exit" aria-label="Exit diagnostic" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:0.85rem;cursor:pointer;padding:6px 10px;margin-right:8px;touch-action:manipulation;white-space:nowrap;">✕ Exit</button>
         <div class="diag-stage-label" id="diag-stage-label">Stage 1 of 5</div>
         <div class="diag-step-count" id="diag-step-count">Step 1 of 5</div>
       </div>
@@ -966,10 +969,12 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
         <div class="tabs" role="tablist" aria-label="Action guidance">
           <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-actions" id="tab-actions-btn">What To Do Now</button>
           <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stuck" id="tab-stuck-btn">If You're Stuck</button>
+          <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-reflect" id="tab-reflect-btn">Reflect Together</button>
         </div>
         <div class="action-panel-body">
           <div id="tab-actions" class="tab-panel active" role="tabpanel" aria-labelledby="tab-actions-btn"></div>
           <div id="tab-stuck" class="tab-panel" role="tabpanel" aria-labelledby="tab-stuck-btn"></div>
+          <div id="tab-reflect" class="tab-panel" role="tabpanel" aria-labelledby="tab-reflect-btn"></div>
         </div>
       </div>
 
@@ -1091,8 +1096,10 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
       </div>
 
       <div id="help-tab-howto" class="tab-panel" role="tabpanel" aria-labelledby="help-tab-howto-btn">
-        <h4 style="color:var(--navy); margin-bottom:8px;">⚡ Quick Diagnostic</h4>
-        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin-bottom:var(--space-lg);">Read each statement. Check all that describe your team right now. You'll get a stage diagnosis in about 2 minutes.</p>
+        <div class="help-howto-quick">
+          <h4 style="color:var(--navy); margin-bottom:8px;">⚡ Quick Diagnostic</h4>
+          <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin-bottom:var(--space-lg);">Read each statement. Check all that describe your team right now. You'll get a stage diagnosis in about 2 minutes.</p>
+        </div>
         <h4 style="color:var(--navy); margin-bottom:8px;">🔍 Detailed Diagnostic</h4>
         <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6;">For each criterion, pick <strong>Present / Somewhat / Not Present</strong> based on what you actually observe — not what you wish were true. Work through all five stages. You'll get a confidence score and a category breakdown.</p>
         <div class="card card-sm mt-md" style="background:var(--bg-page);">
@@ -1170,6 +1177,24 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
   </div>
 </div>
 
+<div class="modal-backdrop" id="exit-warn-backdrop" role="dialog" aria-modal="true" aria-labelledby="exit-warn-title">
+  <div class="modal" id="exit-warn-inner" style="max-width:480px;">
+    <div class="modal-head">
+      <h2 id="exit-warn-title" style="font-size:1.1rem;">Exit Diagnostic?</h2>
+      <button class="modal-close" id="btn-exit-warn-close" aria-label="Close warning">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.95rem; color:var(--text-secondary); line-height:1.6;">
+        Your progress on this diagnostic won't be saved. You can start over anytime from the home screen.
+      </p>
+      <div style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="btn-exit-warn-confirm">Exit Diagnostic</button>
+        <button class="btn btn-outline" id="btn-exit-warn-stay">Keep Going</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Fixed help button (no inline handler) -->
 <button id="btn-help" aria-label="Open help (keyboard shortcut: ?)">?</button>
 
@@ -1194,6 +1219,26 @@ document.addEventListener('DOMContentLoaded', function() {
  * ============================================================
  * CHANGE LOG
  * ============================================================
+ * v1.9.2  Jun 2026  Fordham only: removed Quick Diagnostic as an option.
+ *                   Added APP_CONFIG.quickModeEnabled flag (false for
+ *                   Fordham); hid the "Short on time?" link on the home
+ *                   screen, the Quick feature card on the intro screen,
+ *                   and the Quick section of the help modal's howto tab.
+ *                   Base and consulting variants unaffected — Quick mode
+ *                   remains fully available there.
+ *
+ * v1.9.1  Jun 2026  Fixed Fordham syntax error — missing TRANSITIONS
+ *                   declaration restored (Fordham was non-functional);
+ *                   added Exit button to diagnostic header with
+ *                   confirmation modal — lets users leave the diagnostic
+ *                   at any point without closing the browser
+ *
+ * v1.9.0  Jun 2026  Added "Reflect Together" tab — stage-aware retrospective
+ *                   prompts for both students and instructors, modeled on
+ *                   agile sprint retros; conversational tone, honey over
+ *                   hammer for students, direct and personal for instructors;
+ *                   included in both in-app results and downloaded report
+ *
  * v1.8.8  Jun 2026  Fixed Get Started button centering (display:block +
  *                   margin:0 auto); restored wheel detail card population
  *                   on load (How to move forward / Key challenges now
@@ -1254,7 +1299,7 @@ const APP_CONFIG = {
   // App identity
   appName:        'Team Stage Diagnostic',
   appSubtitle:    "Based on Tuckman's Framework",
-  appVersion:     'v1.8.8-fordham',
+  appVersion:     'v1.9.2-fordham',
 
   // Author
   authorName:     'Mark A. Garman',
@@ -1271,6 +1316,9 @@ const APP_CONFIG = {
 
   // localStorage prefix — keeps Fordham history separate from base app
   storagePrefix:  'fordham_tuckman_',
+
+  // Quick Diagnostic — disabled for Fordham students (Detailed only)
+  quickModeEnabled: false,
 
   // Footer note
   footerNote:     'Developed for Fordham University Gabelli School of Business',
@@ -1371,6 +1419,21 @@ function applyConfig() {
     el.textContent = APP_CONFIG.institution;
     el.style.display = APP_CONFIG.institution ? '' : 'none';
   });
+
+  // Quick Diagnostic — hide entry points when disabled for this variant
+  if (APP_CONFIG.quickModeEnabled === false) {
+    const quickLink = document.getElementById('btn-start-quick');
+    if (quickLink) {
+      const quickLinkP = quickLink.closest('p');
+      if (quickLinkP) quickLinkP.style.display = 'none';
+    }
+    document.querySelectorAll('.intro-feature-card-quick').forEach(function(el) {
+      el.style.display = 'none';
+    });
+    document.querySelectorAll('.help-howto-quick').forEach(function(el) {
+      el.style.display = 'none';
+    });
+  }
 
   // Footer note (if set)
   document.querySelectorAll('.cfg-footer-note').forEach(function(el) {
@@ -1506,6 +1569,93 @@ const DEEP_CRITERIA = [
 /* ============================================================
    DATA — Stage transitions
    ============================================================ */
+// Reflection prompts for team retrospective conversations.
+// Student prompts are conversational and stage-aware, designed to invite
+// honest reflection rather than put anyone on the spot.
+// Instructor prompts help the advisor read what's happening beneath the result.
+const REFLECTION_PROMPTS = {
+  forming: {
+    student: [
+      "What do you want to learn from this project?",
+      "What do you want this team to achieve together?",
+      "What's one thing about your role you'd love more clarity on?",
+      "What's something you wish you could talk about more as a team?",
+      "What would make the next meeting feel a little easier?"
+    ],
+    instructor: [
+      "Notice who's talking and who's staying quiet. Quiet doesn't always mean comfortable.",
+      "Ask yourself if the team actually agrees on what success looks like, or if they just nodded along.",
+      "Keep an eye on the politeness. Is it still there in a few weeks?",
+      "Find a moment to check in with whoever seems least sure of their role.",
+      "Give this stage the time it needs. It sets the tone for everything after it."
+    ]
+  },
+  storming: {
+    student: [
+      "What's one thing that's actually working right now?",
+      "What's something you wish the team talked about more openly?",
+      "Is there something on your mind about the team that you haven't found the right moment to say?",
+      "What would make your next meeting feel a little easier?",
+      "What does the team need most right now?"
+    ],
+    instructor: [
+      "Before you start, how does the team feel when they walk into the room together? Trust that read.",
+      "Listen for what they're not saying as much as what they are.",
+      "Find the person who's gone quiet. Check in with them one on one, not in front of the group.",
+      "If someone says everything's fine, sit with that for a moment. Ask them what fine looks like.",
+      "This stage is hard for everyone. Let them know that. It helps more than you'd think."
+    ]
+  },
+  norming: {
+    student: [
+      "What's working right now that wasn't working a few weeks ago?",
+      "What's making you as a team feel easier to work with?",
+      "What's a stretch goal that would feel exciting for you as a team, rather than overwhelming?",
+      "What's something you'd want to keep doing even after this project ends?",
+      "What would you want to change before things get too comfortable?"
+    ],
+    instructor: [
+      "Is the output actually improving, or just staying steady? Worth a second look.",
+      "How's everyone's energy and workload feeling right now? Settling into a good rhythm, or is something quietly off?",
+      "Does this comfort feel like real trust, or is the team just avoiding disruption?",
+      "A harder challenge right now might tell you a lot about where this team really is.",
+      "Celebrate the wins as they happen. It releases the pressure and keeps the team going."
+    ]
+  },
+  performing: {
+    student: [
+      "What's something this team does really well, and why do you think that is?",
+      "Is our energy sustainable, or is anyone running on empty?",
+      "What would make our final output exceptional, not just good?",
+      "What's something we've identified as a team that we didn't know how to do a month ago?",
+      "Is there anything we've been avoiding because things are going so well right now?"
+    ],
+    instructor: [
+      "Do you see yourselves as a team raising the bar, or coasting on what's already working?",
+      "How's everyone's energy these days? If someone's running on empty, a quiet check in might matter more than another deliverable.",
+      "Ask them what would make people talk about this work after the semester's over. Worth hearing what they say.",
+      "How does the coordination feel? If there's room to improve, where might that be?",
+      "This team built something great. Make sure they hear that from you."
+    ]
+  },
+  adjourning: {
+    student: [
+      "What's something we did well as a team?",
+      "What are you most proud of, not the deliverable, but how you got there?",
+      "What's one thing you'd do differently if you started over with this same group?",
+      "What did you learn about this team that you didn't expect?",
+      "What learnings do you want to carry into the next team you're part of?"
+    ],
+    instructor: [
+      "Ask them what they think made this team work. Their answer is the real takeaway.",
+      "Endings hit people differently. Some feel relief, some feel loss, some feel both, and that loss is real even when the project went well. How are you feeling?",
+      "Is the team closing with intention, or just letting it happen? What would a good ending look like for them?",
+      "What do you think made you as a team special? Generic answers often mean the real reflection hasn't surfaced yet.",
+      "Look at how far you came as a team since starting. Think back to their Forming answers. What's different about this team now?"
+    ]
+  }
+};
+
 const TRANSITIONS = {
   forming:   { from:'Forming',    to:'Storming',   accomplish:['Establish clear goals, roles & responsibilities','Agree on ground rules','Begin working on first deliverables'], signs:['Members begin expressing real opinions','First signs of disagreement or pushback','Polite compliance giving way to honest dialogue'], warnings:['Team remains overly polite after multiple meetings','No one challenges anything','Complete dependence on advisor for all decisions'], insight:'To move forward, everyone has to be willing to say something real — even if it creates friction. The polite phase has to end before the work can begin.' },
   storming:  { from:'Storming',   to:'Norming',    accomplish:['Resolve key conflicts and clarify contested roles','Re-establish or refine ground rules','Develop conflict resolution practices'], signs:['Tension decreasing; members more willing to compromise','Agreement on processes emerging','More frequent and positive communication'], warnings:['Same conflicts recurring without resolution','Subgroups solidifying into factions','Members disengaging or missing meetings'], insight:'Stop testing each other and start solving things together. The most important skill you\'ll develop here is actually listening — not waiting to respond.' },
@@ -2046,6 +2196,19 @@ function deepWarnDismiss() {
   deepWarnPendingAction = null;
 }
 
+function exitWarnShow() {
+  document.getElementById('exit-warn-backdrop').classList.add('open');
+}
+
+function exitWarnDismiss() {
+  document.getElementById('exit-warn-backdrop').classList.remove('open');
+}
+
+function exitWarnConfirm() {
+  document.getElementById('exit-warn-backdrop').classList.remove('open');
+  goHome();
+}
+
 function diagPrev() {
   if (appState.currentStep > 0) { appState.currentStep--; renderDiagStep(appState.currentStep); }
 }
@@ -2200,6 +2363,27 @@ function renderResults(result) {
     `<div class="action-list">${stage.actions.map(a => `<div class="action-item">${a}</div>`).join('')}</div>`;
   document.getElementById('tab-stuck').innerHTML =
     `<div class="action-list">${stage.stuck.map(a => `<div class="action-item">${a}</div>`).join('')}</div>`;
+
+  // Reflect Together tab — student and instructor prompts for the diagnosed stage
+  const reflection = REFLECTION_PROMPTS[result.stage];
+  if (reflection) {
+    document.getElementById('tab-reflect').innerHTML = `
+      <div style="margin-bottom:var(--space-lg);">
+        <p style="font-size:0.82rem; color:var(--text-secondary); margin:0 0 var(--space-md);">
+          A short retrospective, like the ones you run after every sprint. Talk through these as a team, or use them on your own.
+        </p>
+        <h4 style="font-size:0.85rem; font-weight:600; color:var(--navy); text-transform:uppercase; letter-spacing:0.04em; margin:0 0 var(--space-sm);">
+          For the Team
+        </h4>
+        <div class="action-list">${reflection.student.map(q => `<div class="action-item">${q}</div>`).join('')}</div>
+      </div>
+      <div>
+        <h4 style="font-size:0.85rem; font-weight:600; color:var(--navy); text-transform:uppercase; letter-spacing:0.04em; margin:0 0 var(--space-sm);">
+          For the Instructor or Advisor
+        </h4>
+        <div class="action-list">${reflection.instructor.map(q => `<div class="action-item">${q}</div>`).join('')}</div>
+      </div>`;
+  }
 
   // Chart (deep mode only)
   if (appState.mode === 'deep') {
@@ -2452,6 +2636,9 @@ function downloadResults() {
 
   const actionItems = stage.actions.map(a => `<li>${a}</li>`).join('\n');
   const stuckItems  = stage.stuck.map(a => `<li>${a}</li>`).join('\n');
+  const reflection = REFLECTION_PROMPTS[r.stage];
+  const studentReflectItems    = reflection ? reflection.student.map(q => `<li>${q}</li>`).join('\n') : '';
+  const instructorReflectItems = reflection ? reflection.instructor.map(q => `<li>${q}</li>`).join('\n') : '';
 
   const logoHtml = APP_CONFIG.logoSrc
     ? `<img src="${APP_CONFIG.logoSrc}" alt="${APP_CONFIG.institution || APP_CONFIG.appName} logo"
@@ -2533,6 +2720,17 @@ function downloadResults() {
   <p class="section-title">If you're stuck</p>
   <ul>${stuckItems}</ul>
 </div>
+
+${reflection ? `<div class="section">
+  <p class="section-title">Reflect together — for the team</p>
+  <p style="font-size:13px;color:#888;margin:0 0 8px;">A short retrospective, like the ones you run after every sprint. Talk through these as a team, or use them on your own.</p>
+  <ul>${studentReflectItems}</ul>
+</div>
+
+<div class="section">
+  <p class="section-title">Reflect together — for the instructor or advisor</p>
+  <ul>${instructorReflectItems}</ul>
+</div>` : ''}
 
 ${r.scores ? `<div class="section">
   <p class="section-title">All stage scores</p>
@@ -2666,7 +2864,7 @@ function renderChart(scores) {
    ============================================================ */
 
 function switchTab(tab) {
-  ['actions','stuck'].forEach(t => {
+  ['actions','stuck','reflect'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
     const btn = document.getElementById('tab-'+t+'-btn');
     btn.classList.toggle('active', t===tab);
@@ -2803,6 +3001,7 @@ document.getElementById('btn-next').addEventListener('click', diagNext);
 // Results: action tabs
 document.getElementById('tab-actions-btn').addEventListener('click', function() { switchTab('actions'); });
 document.getElementById('tab-stuck-btn').addEventListener('click', function() { switchTab('stuck'); });
+document.getElementById('tab-reflect-btn').addEventListener('click', function() { switchTab('reflect'); });
 
 // Results: retake
 document.getElementById('btn-retake').addEventListener('click', goHome);
@@ -2834,6 +3033,14 @@ document.getElementById('btn-deep-warn-close').addEventListener('click', deepWar
 document.getElementById('btn-deep-warn-back').addEventListener('click', deepWarnDismiss);
 document.getElementById('btn-deep-warn-continue').addEventListener('click', deepWarnContinue);
 
+// Exit diagnostic modal
+document.getElementById('btn-diag-exit').addEventListener('click', exitWarnShow);
+document.getElementById('exit-warn-backdrop').addEventListener('click', exitWarnDismiss);
+document.getElementById('exit-warn-inner').addEventListener('click', function(e) { e.stopPropagation(); });
+document.getElementById('btn-exit-warn-close').addEventListener('click', exitWarnDismiss);
+document.getElementById('btn-exit-warn-stay').addEventListener('click', exitWarnDismiss);
+document.getElementById('btn-exit-warn-confirm').addEventListener('click', exitWarnConfirm);
+
 // Help button (fixed)
 document.getElementById('btn-help').addEventListener('click', openHelp);
 
@@ -2846,6 +3053,7 @@ document.addEventListener('keydown', function(e) {
     closeHelp();
     closeSources();
     deepWarnDismiss();
+    exitWarnDismiss();
     document.querySelectorAll('.tooltip-wrap.open').forEach(function(w) { w.classList.remove('open'); });
   }
 });
