@@ -4,7 +4,7 @@
 
   VERSION: 1.8.2
   To create a branded version: copy this file, change only APP_CONFIG at the
-  top of the <script> block. All other code reads from APP_CONFIG automatically.
+  top of the JS script block. All other code reads from APP_CONFIG automatically.
 
   SOURCES & ATTRIBUTION
   ─────────────────────
@@ -786,7 +786,7 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
 <!-- ============================================================
      HOME SCREEN
      ============================================================ -->
-<div id="screen-home" class="screen active" role="main">
+<div id="screen-home" class="screen" role="main">
   <header class="home-header">
     <div class="container">
       <p class="subtitle"><span class="cfg-subtitle"></span></p>
@@ -891,7 +891,7 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
   <div class="diag-header">
     <div class="container">
       <div class="diag-header-inner">
-        <button id="btn-diag-exit" aria-label="Exit diagnostic" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:0.85rem;cursor:pointer;padding:6px 10px;margin-right:8px;touch-action:manipulation;white-space:nowrap;">✕ Exit</button>
+        <button id="btn-diag-exit" aria-label="Exit diagnostic" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:0.85rem;cursor:pointer;padding:12px 14px;margin-right:8px;touch-action:manipulation;white-space:nowrap;">✕ Exit</button>
         <div class="diag-stage-label" id="diag-stage-label">Stage 1 of 5</div>
         <div class="diag-step-count" id="diag-step-count">Step 1 of 5</div>
       </div>
@@ -963,7 +963,7 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
       <div id="result-notices"></div>
 
       <div class="action-panel mb-xl">
-        <p style="font-size:0.88rem; color:var(--text-secondary); margin:0 0 var(--space-md);">
+        <p style="font-size:0.88rem; color:var(--text-secondary); padding:var(--space-lg) var(--space-lg) 0; margin:0 0 var(--space-md);">
           Based on your stage, here's what your team should focus on right now.
         </p>
         <div class="tabs" role="tablist" aria-label="Action guidance">
@@ -1185,11 +1185,11 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
     </div>
     <div class="modal-body">
       <p style="font-size:0.95rem; color:var(--text-secondary); line-height:1.6;">
-        Your progress on this diagnostic won't be saved. You can start over anytime from the home screen.
+        Your answers from this session will be lost. Your team and project info will still be there when you come back.
       </p>
       <div style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
-        <button class="btn btn-primary" id="btn-exit-warn-confirm">Exit Diagnostic</button>
-        <button class="btn btn-outline" id="btn-exit-warn-stay">Keep Going</button>
+        <button class="btn btn-primary" id="btn-exit-warn-stay">Keep Going</button>
+        <button class="btn btn-outline" id="btn-exit-warn-confirm">Exit Without Saving</button>
       </div>
     </div>
   </div>
@@ -1207,7 +1207,7 @@ footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
      compatibility (iOS WKWebView, Android Chrome, Windows WebView2)
      ============================================================ -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+function tuckmanAppInit() {
 'use strict';
 
 /**
@@ -1343,6 +1343,17 @@ const safeStorage = {
     catch(e) {}
   }
 };
+
+/**
+ * Escape a string for safe interpolation into HTML markup.
+ * Used wherever user-entered text (team/project name) gets inserted
+ * into innerHTML or a generated downloadable HTML document.
+ */
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
 
 /**
  * Apply APP_CONFIG values to all config-driven elements in the DOM.
@@ -1848,6 +1859,7 @@ let appState = {
 
 let deepWarnPendingAction = null;
 let chartInstance = null;
+let chartWaitInterval = null;
 
 /* ============================================================
    SCORING ALGORITHMS
@@ -2198,10 +2210,14 @@ function deepWarnDismiss() {
 
 function exitWarnShow() {
   document.getElementById('exit-warn-backdrop').classList.add('open');
+  document.getElementById('btn-exit-warn-stay').focus();
 }
 
 function exitWarnDismiss() {
-  document.getElementById('exit-warn-backdrop').classList.remove('open');
+  const backdrop = document.getElementById('exit-warn-backdrop');
+  const wasOpen = backdrop.classList.contains('open');
+  backdrop.classList.remove('open');
+  if (wasOpen) document.getElementById('btn-diag-exit').focus();
 }
 
 function exitWarnConfirm() {
@@ -2392,11 +2408,13 @@ function renderResults(result) {
     if (typeof Chart !== 'undefined') {
       renderChart(result.scores);
     } else {
-      document.querySelector('#stage-chart').closest('.chart-container').innerHTML =
+      if (chartWaitInterval) clearInterval(chartWaitInterval);
+      document.querySelector('#result-chart-card .chart-container').innerHTML =
         '<p style="color:var(--text-muted);font-size:0.9rem;text-align:center;padding:2rem;">Loading chart…</p>';
-      const waitForChart = setInterval(() => {
+      chartWaitInterval = setInterval(() => {
         if (typeof Chart !== 'undefined') {
-          clearInterval(waitForChart);
+          clearInterval(chartWaitInterval);
+          chartWaitInterval = null;
           document.querySelector('#result-chart-card .chart-container').innerHTML =
             '<canvas id="stage-chart" aria-label="Bar chart showing scores for all five Tuckman stages"></canvas>';
           renderChart(result.scores);
@@ -2509,7 +2527,7 @@ function renderHistory() {
       ${progression}
     </div>
     <p style="font-size:12px; color:var(--text-secondary); margin-bottom:0.75rem;">
-      ${recent.length} check-in${recent.length !== 1 ? 's' : ''} recorded for ${appState.teamName || 'this team'}.
+      ${recent.length} check-in${recent.length !== 1 ? 's' : ''} recorded for ${escapeHtml(appState.teamName || 'this team')}.
     </p>
     <button class="btn btn-outline" id="btn-clear-history"
             style="font-size:12px; padding:6px 14px;"
@@ -2615,8 +2633,8 @@ function downloadResults() {
   if (!r) return;
 
   const stage = STAGE_DATA[r.stage];
-  const teamName    = appState.teamName    || 'Your Team';
-  const projectName = appState.projectName ? ' — ' + appState.projectName : '';
+  const teamName    = escapeHtml(appState.teamName || 'Your Team');
+  const projectName = appState.projectName ? ' — ' + escapeHtml(appState.projectName) : '';
   const date = new Date().toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -3137,7 +3155,15 @@ if (savedTeam) {
   } catch (e) {}
 }
 
-}); // end DOMContentLoaded
+}
+
+// iOS WKWebView / Android / Windows WebView2 fallback: in some embedding
+// contexts DOMContentLoaded can fire before this script attaches its
+// listener. If the document is already past 'loading', init immediately.
+document.addEventListener('DOMContentLoaded', tuckmanAppInit);
+if (document.readyState !== 'loading') {
+  tuckmanAppInit();
+}
 </script>
 
 </body>
